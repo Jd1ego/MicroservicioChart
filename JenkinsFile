@@ -1,7 +1,22 @@
-stages {
+pipeline {
+    agent any
+
+    environment {
+        REGISTRY = "juancamco"  
+        IMAGE_NAME = "mi-backend"
+        IMAGE_TAG = "latest"
+        MICRO_REPO = "https://github.com/Jd1ego/MicroservicioChart/"
+        CHART_REPO = "git@github.com:tuusuario/Helm-Chart.git"
+        CHART_PACKAGE_NAME = "microservicio-chart"
+        CHART_VERSION = "0.1.0"
+        CHART_TGZ = "microservicio-chart-0.1.0.tgz"
+        CHART_PATH = "Helm-Chart"
+    }
+
+    stages {
         stage('Clonar Código del Microservicio') {
             steps {
-                git branch: 'main', url: MICRO_REPO
+                git branch: 'main', url: https://github.com/Jd1ego/MicroservicioChart/
             }
         }
 
@@ -10,7 +25,7 @@ stages {
                 script {
                     sh """
                         docker build -t $REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
-                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
+                        
                         docker push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
                     """
                 }
@@ -24,7 +39,7 @@ stages {
                         git clone $CHART_REPO
                         cd $CHART_PATH
                         
-                        rm -f $CHART_TGZ  # Eliminar el viejo paquete
+                        rm -f $CHART_TGZ  
                         helm package ../MicroservicioChart --destination . 
                         
 
