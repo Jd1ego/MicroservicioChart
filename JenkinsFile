@@ -1,0 +1,47 @@
+stages {
+        stage('Clonar Código del Microservicio') {
+            steps {
+                git branch: 'main', url: MICRO_REPO
+            }
+        }
+
+        stage('Construir y Publicar Imagen Docker') {
+            steps {
+                script {
+                    sh """
+                        docker build -t $REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
+                        docker push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+                    """
+                }
+            }
+        }
+
+        stage('Actualizar y Empaquetar Helm Chart') {
+            steps {
+                script {
+                    sh """
+                        git clone $CHART_REPO
+                        cd $CHART_PATH
+                        
+                        rm -f $CHART_TGZ  # Eliminar el viejo paquete
+                        helm package ../MicroservicioChart --destination . 
+                        
+
+                        git add $CHART_TGZ
+                        git commit -m "Actualizar Helm Chart con nueva imagen"
+                        git push origin main
+                    """
+                }
+            }
+        }
+
+        stage('Desplegar con ArgoCD') {
+            steps {
+                script {
+                    sh "argocd app sync microservicio"
+                }
+            }
+        }
+    }
+}
