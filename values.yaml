@@ -1,7 +1,8 @@
 
 namespace: default
 nameOverride: microservicio
-deploymentName: microservicioEmail-deployment
+deploymentName: microservicio-deployment
+
 
 replicaCount: 1
 image:
