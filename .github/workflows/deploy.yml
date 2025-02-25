@@ -20,15 +20,21 @@ jobs:
 
       - name: Clonar el Código del Helm Chart
         uses: actions/checkout@v3
+        with:
+          repository: Ayala217/Helm-Chart  # Clonar el repositorio de Helm Charts
+          token: ${{ secrets.GH_PAT }}    
+          ref: main
+
+      - name: Clonar el Microservicio Chart
+        uses: actions/checkout@v3
+        with:
+          repository: Ayala217/MicroservicioChart  # Clonar el repo actual
+          token: ${{ secrets.GH_PAT }}
+          ref: main
+          path: microservicio_chart  # Evita conflictos con el otro repo
 
       - name: Verificar archivos después del checkout
         run: ls -la  # 🔍 Verifica qué se clonó
-
-      - name: Definir CHART_PATH y verificar existencia
-        run: |
-          echo "CHART_PATH=$(pwd)" >> $GITHUB_ENV
-          echo "Directorio actual: $(pwd)"
-          ls -la  # 🔍 Verificar contenido
 
       - name: Instalar Helm
         run: |
@@ -36,9 +42,24 @@ jobs:
           chmod 700 get_helm.sh
           ./get_helm.sh
 
+      - name: Empaquetar el Helm Chart con los cambios nuevos
+        run: |
+          cd microservicio_chart
+          helm package . -d ../Helm-Chart  # Genera el .tgz y lo mueve a Helm-Chart
+
+      - name: Validar reemplazo del paquete
+        run: |
+          cd Helm-Chart
+          ls -la | grep "microservicio-chart-0.1.0.tgz" || echo "⚠️ No se encontró el paquete"
+
+      - name: Autenticar en GitHub con el token secreto
+        run: |
+          cd Helm-Chart
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/Ayala217/Helm-Chart.git
+
       - name: Actualizar Helm Chart
         run: |
-          cd $CHART_PATH || exit 1
+          cd Helm-Chart || exit 1
           echo "Ubicación actual: $(pwd)"
           
           # Asegurar que estamos en un repositorio Git
@@ -49,6 +70,6 @@ jobs:
           
           helm repo index . --url https://Ayala217.github.io/Helm-Chart
           
-          git add index.yaml
-          git commit -m "Actualizar índice del Helm Chart"
+          git add microservicio-chart-0.1.0.tgz index.yaml
+          git commit -m "Actualizar Helm Chart con nueva versión de microservicio-chart-0.1.0.tgz" || echo "⚠️ No hay cambios para hacer commit."
           git push origin main
