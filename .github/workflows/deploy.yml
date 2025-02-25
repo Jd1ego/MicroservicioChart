@@ -17,8 +17,6 @@ jobs:
       IMAGE_NAME: "microservicio"
       IMAGE_TAG: "latest"
       CHART_REPO: "https://github.com/Ayala217/Helm-Chart.git"
-      CHART_PACKAGE_NAME: "microservicio-chart"
-      CHART_VERSION: "0.1.0"
       CHART_TGZ: "microservicio-chart-0.1.0.tgz"
       CHART_PATH: "Helm-Chart"
 
@@ -40,21 +38,20 @@ jobs:
           chmod 700 get_helm.sh
           ./get_helm.sh
 
-      - name: Clonar y Actualizar Helm Chart
+      - name: Actualizar Helm Chart
         run: |
-          git clone $CHART_REPO
           cd $CHART_PATH
 
-          if [ ! -d "../MicroservicioChart" ]; then
-            echo "Error: El directorio '../MicroservicioChart' no existe."
+          # Asegurar que el archivo del chart existe
+          if [ ! -f "$CHART_TGZ" ]; then
+            echo "Error: No se encontró $CHART_TGZ. Verifica el nombre del archivo en el repositorio."
             exit 1
           fi
 
-          rm -f $CHART_TGZ  
-          helm package ../MicroservicioChart --destination .
+          helm repo index . --url https://Ayala217.github.io/Helm-Chart
 
-          git add $CHART_TGZ
-          git commit -m "Actualizar Helm Chart con nueva imagen juancamco/microservicio:latest"
+          git add index.yaml
+          git commit -m "Actualizar índice del Helm Chart"
           git push origin main
 
       - name: Desplegar con ArgoCD
