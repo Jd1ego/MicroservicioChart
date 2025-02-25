@@ -58,6 +58,19 @@ jobs:
           # Guardar en variables de entorno
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
+      - name: Eliminar la versión anterior del paquete
+        run: |
+          cd Helm-Chart
+          
+          # Buscar y eliminar la versión anterior
+          OLD_PACKAGE=$(ls | grep "microservicio-chart-.*.tgz" || echo "")
+          if [ -n "$OLD_PACKAGE" ]; then
+            echo "Eliminando paquete anterior: $OLD_PACKAGE"
+            rm -f "$OLD_PACKAGE"
+          else
+            echo "⚠️ No se encontró un paquete anterior, continuando..."
+          fi
+
       - name: Empaquetar el Helm Chart con la nueva versión
         run: |
           cd microservicio_chart
@@ -77,7 +90,10 @@ jobs:
         run: |
           cd Helm-Chart
           
-          # Actualizar `index.yaml`
+          # Eliminar la entrada anterior del `index.yaml`
+          sed -i "/- name: microservicio-chart/,/version:/d" index.yaml
+          
+          # Regenerar el índice con la nueva versión
           helm repo index . --url https://Ayala217.github.io/Helm-Chart
 
           # Verificar contenido del índice
