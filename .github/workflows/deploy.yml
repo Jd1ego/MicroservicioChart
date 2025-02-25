@@ -21,18 +21,20 @@ jobs:
       - name: Clonar el Código del Helm Chart
         uses: actions/checkout@v3
         with:
-          repository: Ayala217/Helm-Chart  # Asegura que clonas el repositorio correcto
-          token: ${{ secrets.GH_PAT }}    # Usa el token para la autenticación
+          repository: Ayala217/Helm-Chart  # Clonar el repositorio de Helm Charts
+          token: ${{ secrets.GH_PAT }}    
           ref: main
+
+      - name: Clonar el Microservicio Chart
+        uses: actions/checkout@v3
+        with:
+          repository: Jd1ego/MicroservicioChart  # Clonar el repo actual
+        
+          ref: main
+          path: microservicio_chart  # Evita conflictos con el otro repo
 
       - name: Verificar archivos después del checkout
         run: ls -la  # 🔍 Verifica qué se clonó
-
-      - name: Definir CHART_PATH y verificar existencia
-        run: |
-          echo "CHART_PATH=$(pwd)/Helm-Chart" >> $GITHUB_ENV
-          echo "Directorio actual: $(pwd)"
-          ls -la Helm-Chart  # 🔍 Verificar contenido
 
       - name: Instalar Helm
         run: |
@@ -40,39 +42,34 @@ jobs:
           chmod 700 get_helm.sh
           ./get_helm.sh
 
-      - name: Inicializar el repositorio si no existe
+      - name: Empaquetar el Helm Chart con los cambios nuevos
         run: |
-          cd $CHART_PATH
+          cd microservicio_chart
+          helm package . -d ../Helm-Chart 
+
+      - name: Validar reemplazo del paquete
+        run: |
+          cd Helm-Chart
+          ls -la | grep "microservicio-chart-0.1.0.tgz" || echo "⚠️ No se encontró el paquete"
+
+      - name: Autenticar en GitHub con el token secreto
+        run: |
+          cd Helm-Chart
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/Ayala217/Helm-Chart.git
+
+      - name: Actualizar Helm Chart
+        run: |
+          cd Helm-Chart || exit 1
+          echo "Ubicación actual: $(pwd)"
+          
+          # Asegurar que estamos en un repositorio Git
           if [ ! -d ".git" ]; then
-            echo "⚠️ No es un repositorio Git. Inicializando..."
-            git init
-            git remote add origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/Ayala217/Helm-Chart.git
-            git fetch origin main
-            git checkout -b main origin/main
+            echo "⚠️ No es un repositorio Git. Abortando."
+            exit 1
           fi
-
-      - name: Crear nuevo Helm Chart Package
-        run: |
-          cd $CHART_PATH
-          helm package . -d .  # Genera el .tgz en el mismo directorio
-          ls -la
-
-      - name: Reemplazar el archivo existente
-        run: |
-          cd $CHART_PATH
-          rm -f microservicio-chart-0.1.0.tgz  # Borra el anterior
-          mv $(ls | grep "microservicio-chart-0.1.0.tgz") microservicio-chart-0.1.0.tgz  # Renombra si es necesario
-          ls -la
-
-      - name: Actualizar Helm Repo Index
-        run: |
-          cd $CHART_PATH
+          
           helm repo index . --url https://Ayala217.github.io/Helm-Chart
-          ls -la
-
-      - name: Subir cambios a GitHub
-        run: |
-          cd $CHART_PATH
-          git add .
-          git commit -m "Actualizar Helm Chart con nuevo paquete"
-          git push origin main || echo "⚠️ No hay cambios para hacer commit."
+          
+          git add microservicio-chart-0.1.0.tgz index.yaml
+          git commit -m "Actualizar Helm Chart con nueva versión de microservicio-chart-0.1.0.tgz" || echo "⚠️ No hay cambios para hacer commit."
+          git push origin main
