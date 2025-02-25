@@ -23,27 +23,39 @@ jobs:
       CHART_PATH: "Helm-Chart"
 
     steps:
+      - name: Configurar Git
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+
       - name: Clonar el Código del Helm Chart
         uses: actions/checkout@v3
         with:
           repository: Ayala217/Helm-Chart
           ref: main
 
+      - name: Instalar Helm
+        run: |
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
+
       - name: Clonar y Actualizar Helm Chart
         run: |
           git clone $CHART_REPO
           cd $CHART_PATH
-          
+
+          if [ ! -d "../MicroservicioChart" ]; then
+            echo "Error: El directorio '../MicroservicioChart' no existe."
+            exit 1
+          fi
+
           rm -f $CHART_TGZ  
           helm package ../MicroservicioChart --destination .
 
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "github-actions"
           git add $CHART_TGZ
           git commit -m "Actualizar Helm Chart con nueva imagen juancamco/microservicio:latest"
           git push origin main
-        env:
-          GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
 
       - name: Desplegar con ArgoCD
         run: argocd app sync microservicio
