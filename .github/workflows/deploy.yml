@@ -12,14 +12,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    env:
-      REGISTRY: "juancamco"
-      IMAGE_NAME: "microservicio"
-      IMAGE_TAG: "latest"
-      CHART_REPO: "https://github.com/Ayala217/Helm-Chart.git"
-      CHART_TGZ: "microservicio-chart-0.1.0.tgz"
-      CHART_PATH: "Helm-Chart"
-
     steps:
       - name: Configurar Git
         run: |
@@ -32,6 +24,12 @@ jobs:
           repository: Ayala217/Helm-Chart
           ref: main
 
+      - name: Verificar archivos después del checkout
+        run: ls -la  # 🔍 Verifica qué se clonó
+
+      - name: Obtener el nombre correcto del directorio
+        run: echo "CHART_PATH=$(ls -d */ | grep 'Helm-Chart' | head -n 1)" >> $GITHUB_ENV
+
       - name: Instalar Helm
         run: |
           curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
@@ -40,19 +38,9 @@ jobs:
 
       - name: Actualizar Helm Chart
         run: |
-          cd $CHART_PATH
-
-          # Asegurar que el archivo del chart existe
-          if [ ! -f "$CHART_TGZ" ]; then
-            echo "Error: No se encontró $CHART_TGZ. Verifica el nombre del archivo en el repositorio."
-            exit 1
-          fi
-
-          helm repo index . --url https://Ayala217.github.io/Helm-Chart
+          cd $CHART_PATH || exit 1
+          helm repo index . --url https://github.com/Ayala217/Helm-Chart
 
           git add index.yaml
           git commit -m "Actualizar índice del Helm Chart"
           git push origin main
-
-      - name: Desplegar con ArgoCD
-        run: argocd app sync microservicio
