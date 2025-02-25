@@ -71,5 +71,5 @@ jobs:
           helm repo index . --url https://Ayala217.github.io/Helm-Chart
           
           git add microservicio-chart-0.1.0.tgz index.yaml
-          git commit -m "Actualizar Helm Chart con nueva versión de microservicio-chart-0.1.0.tgz" || echo "⚠️ No hay cambios para hacer commit."
+          git commit -m "Actualizar Helm Chart con nueva versión de microservicio-chart-0.1.1.tgz" || echo "⚠️ No hay cambios para hacer commit."
           git push origin main
