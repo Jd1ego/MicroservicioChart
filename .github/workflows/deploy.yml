@@ -9,14 +9,13 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     env:
       REGISTRY: "juancamco"
-      IMAGE_NAME: "mi-backend"
+      IMAGE_NAME: "microservicio"
       IMAGE_TAG: "latest"
-      MICRO_REPO: "https://github.com/Jd1ego/MicroservicioChart/"
       CHART_REPO: "git@github.com:Ayala217/Helm-Chart.git"
       CHART_PACKAGE_NAME: "microservicio-chart"
       CHART_VERSION: "0.1.0"
@@ -24,19 +23,11 @@ jobs:
       CHART_PATH: "Helm-Chart"
 
     steps:
-      - name: Clonar el Código del Microservicio
+      - name: Clonar el Código del Helm Chart
         uses: actions/checkout@v3
         with:
-          repository: Jd1ego/MicroservicioChart
+          repository: Ayala217/Helm-Chart
           ref: main
-
-      - name: Autenticar en DockerHub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "juancamco" --password-stdin
-
-      - name: Construir y Publicar Imagen Docker
-        run: |
-          docker build -t $REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
-          docker push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
 
       - name: Clonar y Actualizar Helm Chart
         run: |
@@ -49,7 +40,7 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git config --global user.name "github-actions"
           git add $CHART_TGZ
-          git commit -m "Actualizar Helm Chart con nueva imagen"
+          git commit -m "Actualizar Helm Chart con nueva imagen juancamco/microservicio:latest"
           git push origin main
         env:
           GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
