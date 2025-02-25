@@ -20,15 +20,15 @@ jobs:
 
       - name: Clonar el Código del Helm Chart
         uses: actions/checkout@v3
-        with:
-          repository: Ayala217/Helm-Chart
-          ref: main
 
       - name: Verificar archivos después del checkout
         run: ls -la  # 🔍 Verifica qué se clonó
 
-      - name: Obtener el nombre correcto del directorio
-        run: echo "CHART_PATH=$(ls -d */ | grep 'Helm-Chart' | head -n 1)" >> $GITHUB_ENV
+      - name: Definir CHART_PATH y verificar existencia
+        run: |
+          echo "CHART_PATH=$(pwd)" >> $GITHUB_ENV
+          echo "Directorio actual: $(pwd)"
+          ls -la  # 🔍 Verificar contenido
 
       - name: Instalar Helm
         run: |
@@ -39,8 +39,16 @@ jobs:
       - name: Actualizar Helm Chart
         run: |
           cd $CHART_PATH || exit 1
-          helm repo index . --url https://github.com/Ayala217/Helm-Chart
-
+          echo "Ubicación actual: $(pwd)"
+          
+          # Asegurar que estamos en un repositorio Git
+          if [ ! -d ".git" ]; then
+            echo "⚠️ No es un repositorio Git. Abortando."
+            exit 1
+          fi
+          
+          helm repo index . --url https://Ayala217.github.io/Helm-Chart
+          
           git add index.yaml
           git commit -m "Actualizar índice del Helm Chart"
           git push origin main
