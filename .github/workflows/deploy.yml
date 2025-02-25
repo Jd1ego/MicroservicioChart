@@ -21,7 +21,7 @@ jobs:
       - name: Clonar el Repositorio de Helm Charts
         uses: actions/checkout@v3
         with:
-          repository: Ayala217/Helm-Chart  # Clonar el repositorio de Helm Charts
+          repository: Ayala217/Helm-Chart
           token: ${{ secrets.GH_PAT }}
           ref: main
           path: Helm-Chart
@@ -29,12 +29,12 @@ jobs:
       - name: Clonar el Microservicio Chart
         uses: actions/checkout@v3
         with:
-          repository: Jd1ego/MicroservicioChart  # Clonar el repo del microservicio
+          repository: Jd1ego/MicroservicioChart
           ref: main
-          path: microservicio_chart  # Evita conflictos con el otro repo
+          path: microservicio_chart
 
       - name: Verificar archivos después del checkout
-        run: ls -la  # 🔍 Verifica qué se clonó
+        run: ls -la
 
       - name: Instalar Helm
         run: |
@@ -42,34 +42,54 @@ jobs:
           chmod 700 get_helm.sh
           ./get_helm.sh
 
-      - name: Empaquetar el Helm Chart con los cambios nuevos
+      - name: Determinar la nueva versión del Chart
+        run: |
+          cd Helm-Chart
+          
+          # Obtener la última versión de `index.yaml`
+          LAST_VERSION=$(grep -oP 'version: \K[\d.]+' index.yaml | sort -V | tail -1)
+          echo "Última versión encontrada: $LAST_VERSION"
+
+          # Incrementar la versión (minor)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST_VERSION"
+          NEW_VERSION="$MAJOR.$((MINOR+1)).0"
+          echo "Nueva versión: $NEW_VERSION"
+
+          # Guardar en variables de entorno
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Empaquetar el Helm Chart con la nueva versión
         run: |
           cd microservicio_chart
-          helm package . -d ../Helm-Chart  # Empaqueta el microservicio dentro del repo Helm-Chart
+
+          # Modificar `Chart.yaml` con la nueva versión
+          sed -i "s/version:.*/version: $NEW_VERSION/" Chart.yaml
+
+          # Empaquetar el Helm Chart
+          helm package . -d ../Helm-Chart
 
       - name: Validar reemplazo del paquete
         run: |
           cd Helm-Chart
-          ls -la | grep "microservicio-chart-0.1.0.tgz" || echo "⚠️ No se encontró el paquete"
+          ls -la | grep "microservicio-chart-$NEW_VERSION.tgz" || echo "⚠️ No se encontró el paquete"
 
-      - name: Inicializar Git en `Helm-Chart` si es necesario
+      - name: Actualizar el índice del Helm Chart
         run: |
           cd Helm-Chart
-          if [ ! -d ".git" ]; then
-            echo "⚠️ No es un repositorio Git. Inicializando..."
-            git init
-            git remote add origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/Ayala217/Helm-Chart.git
-            git fetch origin main
-            git checkout -b main origin/main
-          fi
-
-      - name: Actualizar Helm Chart
-        run: |
-          cd Helm-Chart
-          echo "Ubicación actual: $(pwd)"
           
+          # Actualizar `index.yaml`
           helm repo index . --url https://Ayala217.github.io/Helm-Chart
+
+          # Verificar contenido del índice
+          cat index.yaml
+
+      - name: Subir cambios a GitHub
+        run: |
+          cd Helm-Chart
           
-          git add microservicio-chart-0.1.0.tgz index.yaml
-          git commit -m "Actualizar Helm Chart con nueva versión de microservicio-chart-0.1.1.tgz" || echo "⚠️ No hay cambios para hacer commit."
-          git push origin main
+          # Agregar y hacer commit solo si hay cambios
+          git add .
+          git diff --cached --quiet || git commit -m "Actualizar Helm Chart con la versión $NEW_VERSION"
+          
+          # Hacer push con reintento en caso de error
+          git push origin main || (echo "⚠️ Primer push fallido, intentando de nuevo..." && sleep 5 && git push origin main)
