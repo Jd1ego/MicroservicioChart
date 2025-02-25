@@ -28,8 +28,8 @@ jobs:
       - name: Clonar el Microservicio Chart
         uses: actions/checkout@v3
         with:
-          repository: Ayala217/MicroservicioChart  # Clonar el repo actual
-          token: ${{ secrets.GH_PAT }}
+          repository: Jd1ego/MicroservicioChart  # Clonar el repo actual
+      
           ref: main
           path: microservicio_chart  # Evita conflictos con el otro repo
 
