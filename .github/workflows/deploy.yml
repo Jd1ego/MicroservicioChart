@@ -18,18 +18,18 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git config --global user.name "github-actions"
 
-      - name: Clonar el Código del Helm Chart
+      - name: Clonar el Repositorio de Helm Charts
         uses: actions/checkout@v3
         with:
           repository: Ayala217/Helm-Chart  # Clonar el repositorio de Helm Charts
-          token: ${{ secrets.GH_PAT }}    
+          token: ${{ secrets.GH_PAT }}
           ref: main
+          path: Helm-Chart
 
       - name: Clonar el Microservicio Chart
         uses: actions/checkout@v3
         with:
-          repository: Jd1ego/MicroservicioChart  # Clonar el repo actual
-        
+          repository: Jd1ego/MicroservicioChart  # Clonar el repo del microservicio
           ref: main
           path: microservicio_chart  # Evita conflictos con el otro repo
 
@@ -45,28 +45,28 @@ jobs:
       - name: Empaquetar el Helm Chart con los cambios nuevos
         run: |
           cd microservicio_chart
-          helm package . -d ../Helm-Chart 
+          helm package . -d ../Helm-Chart  # Empaqueta el microservicio dentro del repo Helm-Chart
 
       - name: Validar reemplazo del paquete
         run: |
           cd Helm-Chart
           ls -la | grep "microservicio-chart-0.1.0.tgz" || echo "⚠️ No se encontró el paquete"
 
-      - name: Autenticar en GitHub con el token secreto
+      - name: Inicializar Git en `Helm-Chart` si es necesario
         run: |
           cd Helm-Chart
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/Ayala217/Helm-Chart.git
+          if [ ! -d ".git" ]; then
+            echo "⚠️ No es un repositorio Git. Inicializando..."
+            git init
+            git remote add origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/Ayala217/Helm-Chart.git
+            git fetch origin main
+            git checkout -b main origin/main
+          fi
 
       - name: Actualizar Helm Chart
         run: |
-          cd Helm-Chart || exit 1
+          cd Helm-Chart
           echo "Ubicación actual: $(pwd)"
-          
-          # Asegurar que estamos en un repositorio Git
-          if [ ! -d ".git" ]; then
-            echo "⚠️ No es un repositorio Git. Abortando."
-            exit 1
-          fi
           
           helm repo index . --url https://Ayala217.github.io/Helm-Chart
           
