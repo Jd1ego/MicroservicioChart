@@ -16,7 +16,7 @@ jobs:
       REGISTRY: "juancamco"
       IMAGE_NAME: "microservicio"
       IMAGE_TAG: "latest"
-      CHART_REPO: "git@github.com:Ayala217/Helm-Chart.git"
+      CHART_REPO: "https://github.com/Ayala217/Helm-Chart.git"
       CHART_PACKAGE_NAME: "microservicio-chart"
       CHART_VERSION: "0.1.0"
       CHART_TGZ: "microservicio-chart-0.1.0.tgz"
